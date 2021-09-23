@@ -1,6 +1,7 @@
 package upf
 
 import (
+	"sync"
 	//"fmt"
 	"net"
 	//"time"
@@ -27,6 +28,8 @@ var localMacAddr [types.EtherAddrLen]uint8
 var teAddress net.IP
 
 var tscsec uint64
+
+var lock sync.RWMutex
 
 type gtp5gHdr struct {
 	headerType            uint8
@@ -257,6 +260,8 @@ func xlHandler(pkt *packet.Packet) *pdr {
 }
 
 func xlEnq(buf uintptr, enqed *bool) {
+	lock.RLock()
+	defer lock.RUnlock()
 	now := tsc()
 	pkt := packet.ExtractPacket(buf)
 	pdr := xlHandler(pkt)
@@ -274,6 +279,8 @@ func xlEnq(buf uintptr, enqed *bool) {
 }
 
 func xlDeq(buf *uintptr, deqed *bool) {
+	lock.RLock()
+	defer lock.RUnlock()
 	qer := queuedQers.head()
 	if qer == nil {
 		*deqed = false
