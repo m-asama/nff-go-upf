@@ -71,10 +71,17 @@ func recalcAfterEnq(pdr *pdr) {
 
 func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
 	//fmt.Println("recalcAfterDeq:")
-	if pdr.pdi.fteid.teid == 0 && pdr.pdi.fteid.address == nil {
-		size = size - types.EtherLen - types.VLANLen
-	} else {
+	/*
+		if pdr.pdi.fteid.teid == 0 && pdr.pdi.fteid.address == nil {
+			size = size - types.EtherLen - types.VLANLen
+		} else {
+			size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
+		}
+	*/
+	if pdr.far.destinationInterface == IV_ACCESS {
 		size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
+	} else {
+		size = size - types.EtherLen - types.VLANLen
 	}
 	if pdr.isUl() {
 		qer.nextUlTx = now + qer.ulDelta*uint64(size)
@@ -267,7 +274,6 @@ func xlEnq(buf uintptr, enqed *bool) {
 }
 
 func xlDeq(buf *uintptr, deqed *bool) {
-	now := tsc()
 	qer := queuedQers.head()
 	if qer == nil {
 		*deqed = false
@@ -278,6 +284,7 @@ func xlDeq(buf *uintptr, deqed *bool) {
 		*deqed = false
 		return
 	}
+	now := tsc()
 	if deqable(qer, pdr, now) {
 		*buf, _ = pdr.pktq.deq()
 		*deqed = true

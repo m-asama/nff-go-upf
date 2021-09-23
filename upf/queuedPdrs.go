@@ -56,14 +56,18 @@ func (queuedPdrs *queuedPdrsType) qlen() int {
 
 func (queuedPdrs *queuedPdrsType) sort() {
 	sort.Slice(queuedPdrs.pdrsSlice, func(a, b int) bool {
-		amin, err := queuedPdrs.pdrsSlice[a].pktq.qold()
-		if err != nil {
-			panic(err)
-		}
-		bmin, err := queuedPdrs.pdrsSlice[b].pktq.qold()
-		if err != nil {
-			panic(err)
-		}
+		/*
+			amin, err := queuedPdrs.pdrsSlice[a].pktq.qold()
+			if err != nil {
+				panic(err)
+			}
+			bmin, err := queuedPdrs.pdrsSlice[b].pktq.qold()
+			if err != nil {
+				panic(err)
+			}
+		*/
+		amin := queuedPdrs.pdrsSlice[a].pktq.qold()
+		bmin := queuedPdrs.pdrsSlice[b].pktq.qold()
 		return int64(amin-bmin) < 0
 	})
 }

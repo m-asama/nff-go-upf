@@ -177,13 +177,13 @@ func initSessions(conf *config.Config) error {
 				return fmt.Errorf("sessions[%d].qers[%d].gateStatus invalid", i, j)
 			}
 			if confQer.Mbr != nil {
-				if confQer.Mbr.Ul != nil {
+				if confQer.Mbr.Ul != nil && *confQer.Mbr.Ul != 0 {
 					newQer.mbrUl = *confQer.Mbr.Ul
-					newQer.ulDelta = tscsec * 8 / newQer.mbrUl
+					newQer.ulDelta = tscsec * 8 / (newQer.mbrUl * 1000)
 				}
-				if confQer.Mbr.Dl != nil {
+				if confQer.Mbr.Dl != nil && *confQer.Mbr.Dl != 0 {
 					newQer.mbrDl = *confQer.Mbr.Dl
-					newQer.dlDelta = tscsec * 8 / newQer.mbrDl
+					newQer.dlDelta = tscsec * 8 / (newQer.mbrDl * 1000)
 				}
 			}
 			if confQer.Qfi != nil {
@@ -320,7 +320,7 @@ func initSessions(conf *config.Config) error {
 					return fmt.Errorf("sessions[%d].pdrs[%d] qer not found", i, j)
 				}
 			}
-			newPdr.pktq = newPktq(1024)
+			newPdr.pktq = newPktq(256)
 			if newPdr.pdi.fteid.teid == 0 && newPdr.pdi.fteid.address == nil {
 				newSession.n6Pdrs = append(newSession.n6Pdrs, &newPdr)
 				var n6SessionKey n6SessionKey

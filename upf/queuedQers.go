@@ -1,7 +1,7 @@
 package upf
 
 import (
-	"errors"
+	//"errors"
 	"sort"
 )
 
@@ -59,9 +59,11 @@ func (queuedQers *queuedQersType) sort() {
 	sort.Slice(queuedQers.qersSlice, func(a, b int) bool {
 		aQer := queuedQers.qersSlice[a]
 		aPdr := aQer.queuedPdrs.head()
-		if aPdr == nil {
-			panic(errors.New("queuedPdrs empty"))
-		}
+		/*
+			if aPdr == nil {
+				panic(errors.New("queuedPdrs empty"))
+			}
+		*/
 		var aNext uint64
 		if aPdr.isUl() {
 			aNext = aQer.nextUlTx
@@ -70,9 +72,11 @@ func (queuedQers *queuedQersType) sort() {
 		}
 		bQer := queuedQers.qersSlice[b]
 		bPdr := bQer.queuedPdrs.head()
-		if bPdr == nil {
-			panic(errors.New("queuedPdrs empty"))
-		}
+		/*
+			if bPdr == nil {
+				panic(errors.New("queuedPdrs empty"))
+			}
+		*/
 		var bNext uint64
 		if bPdr.isUl() {
 			bNext = bQer.nextUlTx

@@ -1,9 +1,5 @@
 package upf
 
-import (
-	"errors"
-)
-
 type pkt struct {
 	pktp uintptr
 	qdat uint64
@@ -63,9 +59,14 @@ func (pktq *pktq) qlen() int {
 	return pktq.size + pktq.tail - pktq.head
 }
 
+/*
 func (pktq *pktq) qold() (uint64, error) {
 	if pktq.qlen() == 0 {
 		return 0, errors.New("pktq empty")
 	}
 	return pktq.pktq[pktq.head].qdat, nil
+}
+*/
+func (pktq *pktq) qold() uint64 {
+	return pktq.pktq[pktq.head].qdat
 }

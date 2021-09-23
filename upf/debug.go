@@ -10,7 +10,10 @@ func debugDump() {
 	for i, qer := range queuedQers.qersSlice {
 		fmt.Println(now, "\t", fmt.Sprintf("%4d", i), qer.qerid, qer.nextUlTx, qer.nextDlTx)
 		for j, pdr := range qer.queuedPdrs.pdrsSlice {
-			qold, _ := pdr.pktq.qold()
+			/*
+				qold, _ := pdr.pktq.qold()
+			*/
+			qold := pdr.pktq.qold()
 			fmt.Println(now, "\t\t", fmt.Sprintf("%4d", j), pdr.pdrid, qold, pdr.pktq.qlen())
 		}
 	}
