@@ -60,11 +60,21 @@ func recalcAfterEnq(pdr *pdr) {
 		return
 	}
 	for _, qer := range pdr.qers {
-		befor := qer.queuedPdrs.qlen()
-		if !qer.queuedPdrs.exists(pdr) {
-			qer.queuedPdrs.enq(pdr)
-			if befor == 0 && !queuedQers.exists(qer) {
-				queuedQers.enq(qer)
+		if pdr.isUl() {
+			befor := qer.queuedUlPdrs.qlen()
+			if !qer.queuedUlPdrs.exists(pdr) {
+				qer.queuedUlPdrs.enq(pdr)
+				if befor == 0 && !queuedQers.exists(qer) {
+					queuedQers.enq(qer)
+				}
+			}
+		} else {
+			befor := qer.queuedDlPdrs.qlen()
+			if !qer.queuedDlPdrs.exists(pdr) {
+				qer.queuedDlPdrs.enq(pdr)
+				if befor == 0 && !queuedQers.exists(qer) {
+					queuedQers.enq(qer)
+				}
 			}
 		}
 	}
@@ -74,13 +84,6 @@ func recalcAfterEnq(pdr *pdr) {
 
 func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
 	//fmt.Println("recalcAfterDeq:")
-	/*
-		if pdr.pdi.fteid.teid == 0 && pdr.pdi.fteid.address == nil {
-			size = size - types.EtherLen - types.VLANLen
-		} else {
-			size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
-		}
-	*/
 	if pdr.far.destinationInterface == IV_ACCESS {
 		size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
 	} else {
@@ -88,19 +91,27 @@ func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
 	}
 	if pdr.isUl() {
 		qer.nextUlTx = now + qer.ulDelta*uint64(size)
+		queuedPdrsSorted := false
+		if pdr.pktq.qlen() == 0 {
+			qer.queuedUlPdrs.deq()
+			queuedPdrsSorted = true
+		}
+		if !queuedPdrsSorted {
+			qer.queuedUlPdrs.sort()
+		}
 	} else {
 		qer.nextDlTx = now + qer.dlDelta*uint64(size)
-	}
-	queuedPdrsSorted := false
-	if pdr.pktq.qlen() == 0 {
-		qer.queuedPdrs.deq()
-		queuedPdrsSorted = true
-	}
-	if !queuedPdrsSorted {
-		qer.queuedPdrs.sort()
+		queuedPdrsSorted := false
+		if pdr.pktq.qlen() == 0 {
+			qer.queuedDlPdrs.deq()
+			queuedPdrsSorted = true
+		}
+		if !queuedPdrsSorted {
+			qer.queuedDlPdrs.sort()
+		}
 	}
 	queuedQersSorted := false
-	if qer.queuedPdrs.qlen() == 0 {
+	if qer.queuedUlPdrs.qlen() == 0 && qer.queuedDlPdrs.qlen() == 0 {
 		queuedQers.deq()
 		queuedQersSorted = true
 	}
@@ -113,9 +124,9 @@ func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
 
 func deqable(qer *qer, pdr *pdr, now uint64) bool {
 	if pdr.isUl() {
-		return int64(now-qer.nextUlTx) > 0
+		return int64(now-qer.nextUlTx) >= 0
 	}
-	return int64(now-qer.nextDlTx) > 0
+	return int64(now-qer.nextDlTx) >= 0
 }
 
 func n6PdrLookup(pkt *packet.Packet) *pdr {
@@ -286,7 +297,7 @@ func xlDeq(buf *uintptr, deqed *bool) {
 		*deqed = false
 		return
 	}
-	pdr := qer.queuedPdrs.head()
+	pdr := qer.nextPdr()
 	if pdr == nil {
 		*deqed = false
 		return

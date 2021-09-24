@@ -2,19 +2,24 @@ package upf
 
 import (
 	"fmt"
-	"time"
 )
 
 func debugDump() {
-	now := time.Now()
 	for i, qer := range queuedQers.qersSlice {
-		fmt.Println(now, "\t", fmt.Sprintf("%4d", i), qer.qerid, qer.nextUlTx, qer.nextDlTx)
-		for j, pdr := range qer.queuedPdrs.pdrsSlice {
+		fmt.Println("\t", fmt.Sprintf("%4d", i), "qerid:", qer.qerid, "nextUlTx:", qer.nextUlTx, "nextDlTx:", qer.nextDlTx)
+		for j, pdr := range qer.queuedUlPdrs.pdrsSlice {
 			/*
 				qold, _ := pdr.pktq.qold()
 			*/
 			qold := pdr.pktq.qold()
-			fmt.Println(now, "\t\t", fmt.Sprintf("%4d", j), pdr.pdrid, qold, pdr.pktq.qlen())
+			fmt.Println("\t\t[UL]", fmt.Sprintf("%4d", j), "pdrid:", pdr.pdrid, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
+		}
+		for j, pdr := range qer.queuedDlPdrs.pdrsSlice {
+			/*
+				qold, _ := pdr.pktq.qold()
+			*/
+			qold := pdr.pktq.qold()
+			fmt.Println("\t\t[DL]", fmt.Sprintf("%4d", j), "pdrid:", pdr.pdrid, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
 		}
 	}
 }

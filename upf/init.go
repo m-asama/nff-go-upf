@@ -189,7 +189,8 @@ func initSessions(conf *config.Config) error {
 			if confQer.Qfi != nil {
 				newQer.qfi = uint8(*confQer.Qfi)
 			}
-			newQer.queuedPdrs.init()
+			newQer.queuedUlPdrs.init()
+			newQer.queuedDlPdrs.init()
 			newQer.nextUlTx = tsc()
 			newQer.nextDlTx = tsc()
 			newSession.qers = append(newSession.qers, &newQer)

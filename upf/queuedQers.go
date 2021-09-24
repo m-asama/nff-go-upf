@@ -57,32 +57,8 @@ func (queuedQers *queuedQersType) qlen() int {
 
 func (queuedQers *queuedQersType) sort() {
 	sort.Slice(queuedQers.qersSlice, func(a, b int) bool {
-		aQer := queuedQers.qersSlice[a]
-		aPdr := aQer.queuedPdrs.head()
-		/*
-			if aPdr == nil {
-				panic(errors.New("queuedPdrs empty"))
-			}
-		*/
-		var aNext uint64
-		if aPdr.isUl() {
-			aNext = aQer.nextUlTx
-		} else {
-			aNext = aQer.nextDlTx
-		}
-		bQer := queuedQers.qersSlice[b]
-		bPdr := bQer.queuedPdrs.head()
-		/*
-			if bPdr == nil {
-				panic(errors.New("queuedPdrs empty"))
-			}
-		*/
-		var bNext uint64
-		if bPdr.isUl() {
-			bNext = bQer.nextUlTx
-		} else {
-			bNext = bQer.nextDlTx
-		}
+		aNext := queuedQers.qersSlice[a].nextTx()
+		bNext := queuedQers.qersSlice[b].nextTx()
 		return int64(aNext-bNext) < 0
 	})
 }
