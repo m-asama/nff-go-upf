@@ -1,9 +1,9 @@
 package upf
 
 import (
-	"sync"
 	//"fmt"
 	"net"
+	"sync"
 	//"time"
 	"encoding/binary"
 	"unsafe"
@@ -59,74 +59,59 @@ func recalcAfterEnq(pdr *pdr) {
 		//debugDump()
 		return
 	}
-	for _, qer := range pdr.qers {
-		if pdr.isUl() {
-			befor := qer.queuedUlPdrs.qlen()
-			if !qer.queuedUlPdrs.exists(pdr) {
-				qer.queuedUlPdrs.enq(pdr)
-				if befor == 0 && !queuedQers.exists(qer) {
-					queuedQers.enq(qer)
-				}
-			}
-		} else {
-			befor := qer.queuedDlPdrs.qlen()
-			if !qer.queuedDlPdrs.exists(pdr) {
-				qer.queuedDlPdrs.enq(pdr)
-				if befor == 0 && !queuedQers.exists(qer) {
-					queuedQers.enq(qer)
-				}
-			}
-		}
-	}
+	queuedPdrs.enq(pdr)
+	queuedPdrs.sort()
 	/* XXX: */
 	//debugDump()
 }
 
-func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
+func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 	//fmt.Println("recalcAfterDeq:")
 	if pdr.far.destinationInterface == IV_ACCESS {
 		size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
 	} else {
 		size = size - types.EtherLen - types.VLANLen
 	}
-	if pdr.isUl() {
-		qer.nextUlTx = now + qer.ulDelta*uint64(size)
-		queuedPdrsSorted := false
-		if pdr.pktq.qlen() == 0 {
-			qer.queuedUlPdrs.deq()
-			queuedPdrsSorted = true
-		}
-		if !queuedPdrsSorted {
-			qer.queuedUlPdrs.sort()
-		}
-	} else {
-		qer.nextDlTx = now + qer.dlDelta*uint64(size)
-		queuedPdrsSorted := false
-		if pdr.pktq.qlen() == 0 {
-			qer.queuedDlPdrs.deq()
-			queuedPdrsSorted = true
-		}
-		if !queuedPdrsSorted {
-			qer.queuedDlPdrs.sort()
+	for _, qer := range pdr.qers {
+		if pdr.isUl() {
+			qer.nextUlTx = now + qer.ulDelta*uint64(size)
+		} else {
+			qer.nextDlTx = now + qer.dlDelta*uint64(size)
 		}
 	}
-	queuedQersSorted := false
-	if qer.queuedUlPdrs.qlen() == 0 && qer.queuedDlPdrs.qlen() == 0 {
-		queuedQers.deq()
-		queuedQersSorted = true
+	for _, qer := range pdr.qers {
+		if pdr.isUl() {
+			for _, pTmp := range qer.ulPdrs {
+				latestNext := now
+				for _, qTmp := range pTmp.qers {
+					if int64(latestNext-qTmp.nextUlTx) < 0 {
+						latestNext = qTmp.nextUlTx
+					}
+				}
+				pTmp.nextTx = latestNext
+			}
+		} else {
+			for _, pTmp := range qer.dlPdrs {
+				latestNext := now
+				for _, qTmp := range pTmp.qers {
+					if int64(latestNext-qTmp.nextDlTx) < 0 {
+						latestNext = qTmp.nextDlTx
+					}
+				}
+				pTmp.nextTx = latestNext
+			}
+		}
 	}
-	if !queuedQersSorted {
-		queuedQers.sort()
+	if pdr.pktq.qlen() == 0 {
+		queuedPdrs.deq()
 	}
+	queuedPdrs.sort()
 	/* XXX: */
 	//debugDump()
 }
 
-func deqable(qer *qer, pdr *pdr, now uint64) bool {
-	if pdr.isUl() {
-		return int64(now-qer.nextUlTx) >= 0
-	}
-	return int64(now-qer.nextDlTx) >= 0
+func deqable(pdr *pdr, now uint64) bool {
+	return int64(now-pdr.nextTx) >= 0
 }
 
 func n6PdrLookup(pkt *packet.Packet) *pdr {
@@ -292,23 +277,18 @@ func xlEnq(buf uintptr, enqed *bool) {
 func xlDeq(buf *uintptr, deqed *bool) {
 	lock.RLock()
 	defer lock.RUnlock()
-	qer := queuedQers.head()
-	if qer == nil {
-		*deqed = false
-		return
-	}
-	pdr := qer.nextPdr()
+	pdr := queuedPdrs.head()
 	if pdr == nil {
 		*deqed = false
 		return
 	}
 	now := tsc()
-	if deqable(qer, pdr, now) {
+	if deqable(pdr, now) {
 		*buf, _ = pdr.pktq.deq()
 		*deqed = true
 		pkt := packet.ExtractPacket(*buf)
 		size := pkt.GetPacketLen()
-		recalcAfterDeq(qer, pdr, size, now)
+		recalcAfterDeq(pdr, size, now)
 		return
 	}
 	*deqed = false

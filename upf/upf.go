@@ -49,6 +49,8 @@ type pdr struct {
 	qers               []*qer
 
 	pktq pktq
+
+	nextTx uint64
 }
 
 /* XXX: */
@@ -103,44 +105,13 @@ type qer struct {
 	mbrDl uint64
 	qfi   uint8
 
-	queuedUlPdrs queuedPdrsType
-	queuedDlPdrs queuedPdrsType
-	nextUlTx     uint64
-	nextDlTx     uint64
-	ulDelta      uint64
-	dlDelta      uint64
-}
+	ulPdrs []*pdr
+	dlPdrs []*pdr
 
-func (qer *qer) nextTx() uint64 {
-	if qer.queuedUlPdrs.qlen() > 0 {
-		if qer.queuedDlPdrs.qlen() > 0 {
-			if qer.nextUlTx < qer.nextDlTx {
-				return qer.nextUlTx
-			} else {
-				return qer.nextDlTx
-			}
-		} else {
-			return qer.nextUlTx
-		}
-	} else {
-		return qer.nextDlTx
-	}
-}
-
-func (qer *qer) nextPdr() *pdr {
-	if qer.queuedUlPdrs.qlen() > 0 {
-		if qer.queuedDlPdrs.qlen() > 0 {
-			if qer.nextUlTx < qer.nextDlTx {
-				return qer.queuedUlPdrs.head()
-			} else {
-				return qer.queuedDlPdrs.head()
-			}
-		} else {
-			return qer.queuedUlPdrs.head()
-		}
-	} else {
-		return qer.queuedDlPdrs.head()
-	}
+	nextUlTx uint64
+	nextDlTx uint64
+	ulDelta  uint64
+	dlDelta  uint64
 }
 
 var sessions []*session
@@ -151,4 +122,4 @@ type n6SessionKey [4]byte
 var n3n9SessionMap map[n3n9SessionKey]*session
 var n6SessionMap map[n6SessionKey]*session
 
-var queuedQers queuedQersType
+var queuedPdrs queuedPdrsType

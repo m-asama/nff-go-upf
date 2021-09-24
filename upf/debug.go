@@ -5,21 +5,12 @@ import (
 )
 
 func debugDump() {
-	for i, qer := range queuedQers.qersSlice {
-		fmt.Println("\t", fmt.Sprintf("%4d", i), "qerid:", qer.qerid, "nextUlTx:", qer.nextUlTx, "nextDlTx:", qer.nextDlTx)
-		for j, pdr := range qer.queuedUlPdrs.pdrsSlice {
-			/*
-				qold, _ := pdr.pktq.qold()
-			*/
-			qold := pdr.pktq.qold()
-			fmt.Println("\t\t[UL]", fmt.Sprintf("%4d", j), "pdrid:", pdr.pdrid, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
-		}
-		for j, pdr := range qer.queuedDlPdrs.pdrsSlice {
-			/*
-				qold, _ := pdr.pktq.qold()
-			*/
-			qold := pdr.pktq.qold()
-			fmt.Println("\t\t[DL]", fmt.Sprintf("%4d", j), "pdrid:", pdr.pdrid, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
+	for i, pdr := range queuedPdrs.pdrsSlice {
+		qold := pdr.pktq.qold()
+		if pdr.isUl() {
+			fmt.Println("\t\t[UL]", fmt.Sprintf("%4d", i), "pdrid:", pdr.pdrid, "nextTx:", pdr.nextTx, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
+		} else {
+			fmt.Println("\t\t[DL]", fmt.Sprintf("%4d", i), "pdrid:", pdr.pdrid, "nextTx:", pdr.nextTx, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
 		}
 	}
 }

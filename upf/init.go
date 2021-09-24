@@ -189,8 +189,8 @@ func initSessions(conf *config.Config) error {
 			if confQer.Qfi != nil {
 				newQer.qfi = uint8(*confQer.Qfi)
 			}
-			newQer.queuedUlPdrs.init()
-			newQer.queuedDlPdrs.init()
+			newQer.ulPdrs = make([]*pdr, 0)
+			newQer.dlPdrs = make([]*pdr, 0)
 			newQer.nextUlTx = tsc()
 			newQer.nextDlTx = tsc()
 			newSession.qers = append(newSession.qers, &newQer)
@@ -315,6 +315,11 @@ func initSessions(conf *config.Config) error {
 					if qer.qerid == uint32(qerid) {
 						qerFound = true
 						newPdr.qers = append(newPdr.qers, qer)
+						if newPdr.isUl() {
+							qer.ulPdrs = append(qer.ulPdrs, &newPdr)
+						} else {
+							qer.dlPdrs = append(qer.dlPdrs, &newPdr)
+						}
 					}
 				}
 				if !qerFound {
@@ -413,7 +418,7 @@ func init() {
 	sessions = make([]*session, 0)
 	n6SessionMap = make(map[n6SessionKey]*session)
 	n3n9SessionMap = make(map[n3n9SessionKey]*session)
-	queuedQers.init()
+	queuedPdrs.init()
 
 	t1 := tsc()
 	time.Sleep(time.Second)
