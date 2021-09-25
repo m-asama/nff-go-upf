@@ -1,0 +1,60 @@
+global:
+  cpuList: 0-3
+  local:
+    port: 0
+    address: xx:xx:xx:xx:xx:xx
+    teAddress: 172.16.1.1
+  n3n9:
+    vlanId: 11
+    address: xx:xx:xx:xx:xx:xx
+  n6:
+    vlanId: 12
+    address: xx:xx:xx:xx:xx:xx
+sessions:
+  - fseid:
+      seid: 1
+      address: 127.0.0.8
+    pdrs:
+      - pdrid: 1
+        precedence: 255
+        pdi:
+          sourceInterface: access
+          fteid:
+            teid: 1
+            address: 172.16.1.1
+          networkInstance: ""
+          ueIpAddress: 192.168.0.1
+        outerHeaderRemoval: true
+        farid: 1
+        qerids:
+          - 1
+      - pdrid: 2
+        precedence: 255
+        pdi:
+          sourceInterface: core
+          networkInstance: internet
+          ueIpAddress: 192.168.0.1
+        farid: 2
+        qerids:
+          - 1
+    fars:
+      - farid: 1
+        applyAction: 2
+        forwardingParameters:
+          destinationInterface: sgin6
+          networkInstance: internet
+      - farid: 2
+        applyAction: 2
+        forwardingParameters:
+          destinationInterface: acccess
+          networkInstance: ""
+          outerHeaderCreation:
+            teid: 2
+            address: 172.16.1.2
+    qers:
+      - qerid: 1
+        gateStatus: open
+        mbr:
+          ul: 10000
+          dl: 10000
+        qfi: 1
