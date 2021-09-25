@@ -40,6 +40,13 @@ type fseid struct {
 	address net.IP
 }
 
+type pdrColor int
+
+const (
+	PC_BLACK pdrColor = iota
+	PC_RED
+)
+
 type pdr struct {
 	pdrid              uint16
 	precedence         uint32
@@ -49,6 +56,13 @@ type pdr struct {
 	qers               []*qer
 
 	pktq pktq
+
+	nextTx uint64
+
+	parent *pdr
+	left   *pdr
+	right  *pdr
+	color  pdrColor
 }
 
 /* XXX: */
@@ -103,11 +117,13 @@ type qer struct {
 	mbrDl uint64
 	qfi   uint8
 
-	queuedPdrs queuedPdrsType
-	nextUlTx   uint64
-	nextDlTx   uint64
-	ulDelta    uint64
-	dlDelta    uint64
+	ulPdrs []*pdr
+	dlPdrs []*pdr
+
+	nextUlTx uint64
+	nextDlTx uint64
+	ulDelta  uint64
+	dlDelta  uint64
 }
 
 var sessions []*session
@@ -118,4 +134,4 @@ type n6SessionKey [4]byte
 var n3n9SessionMap map[n3n9SessionKey]*session
 var n6SessionMap map[n6SessionKey]*session
 
-var queuedQers queuedQersType
+var queuedPdrs queuedPdrsType

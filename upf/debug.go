@@ -2,21 +2,44 @@ package upf
 
 import (
 	"fmt"
-	"time"
+	//"time"
 )
 
-func debugDump() {
-	now := time.Now()
-	for i, qer := range queuedQers.qersSlice {
-		fmt.Println(now, "\t", fmt.Sprintf("%4d", i), qer.qerid, qer.nextUlTx, qer.nextDlTx)
-		for j, pdr := range qer.queuedPdrs.pdrsSlice {
-			/*
-				qold, _ := pdr.pktq.qold()
-			*/
-			qold := pdr.pktq.qold()
-			fmt.Println(now, "\t\t", fmt.Sprintf("%4d", j), pdr.pdrid, qold, pdr.pktq.qlen())
-		}
+func debugDump1(pdr *pdr, i *int) {
+	if pdr == nil {
+		return
 	}
+	if pdr.left != sentinelPdr {
+		debugDump1(pdr.left, i)
+	}
+	if pdr != sentinelPdr {
+		qold := pdr.pktq.qold()
+		if pdr.isUl() {
+			fmt.Print("\t[UL] ")
+		} else {
+			fmt.Print("\t[DL] ")
+		}
+		fmt.Printf("me: %p parent: %p left: %p right: %p ", pdr, pdr.parent, pdr.left, pdr.right)
+		switch pdr.color {
+		case PC_BLACK:
+			fmt.Print("*B* ")
+		case PC_RED:
+			fmt.Print("*R* ")
+		default:
+			fmt.Print("*?* ")
+		}
+		fmt.Println(fmt.Sprintf("%4d", *i), "pdrid:", pdr.pdrid, "nextTx:", pdr.nextTx, "qold:", qold, "pktq.qlen:", pdr.pktq.qlen())
+		*i++
+	}
+	if pdr.right != sentinelPdr {
+		debugDump1(pdr.right, i)
+	}
+}
+
+func debugDump() {
+	fmt.Printf("\tqueuedPdrs.root: %p queuedPdrs.qlen: %d sentinelPdr: %p\n", queuedPdrs.root, queuedPdrs.qlen, sentinelPdr)
+	i := 0
+	debugDump1(queuedPdrs.root, &i)
 }
 
 func debugPdr(i int, pdr *pdr) {

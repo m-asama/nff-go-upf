@@ -1,14 +1,12 @@
 package upf
 
 import (
-	"sync"
 	//"fmt"
 	"net"
+	"sync"
 	//"time"
 	"encoding/binary"
 	"unsafe"
-
-	//"github.com/m-asama/nff-go-upf/tsc"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -54,68 +52,95 @@ type gtp5gCork struct {
 }
 
 func recalcAfterEnq(pdr *pdr) {
-	//fmt.Println("recalcAfterEnq:")
-	if pdr.pktq.qlen() != 1 {
-		//debugDump()
-		return
-	}
-	for _, qer := range pdr.qers {
-		befor := qer.queuedPdrs.qlen()
-		if !qer.queuedPdrs.exists(pdr) {
-			qer.queuedPdrs.enq(pdr)
-			if befor == 0 && !queuedQers.exists(qer) {
-				queuedQers.enq(qer)
-			}
-		}
+	//fmt.Println("→ before recalcAfterEnq:")
+	//debugDump()
+	//fmt.Println("← before recalcAfterEnq:")
+	if pdr.pktq.qlen() == 1 {
+		queuedPdrs.insert(pdr)
 	}
 	/* XXX: */
+	//fmt.Println("→ after recalcAfterEnq:")
 	//debugDump()
+	//fmt.Println("← after recalcAfterEnq:")
 }
 
-func recalcAfterDeq(qer *qer, pdr *pdr, size uint, now uint64) {
-	//fmt.Println("recalcAfterDeq:")
-	/*
-		if pdr.pdi.fteid.teid == 0 && pdr.pdi.fteid.address == nil {
-			size = size - types.EtherLen - types.VLANLen
-		} else {
-			size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
+func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
+	//fmt.Println("→ before recalcAfterDeq:")
+	//debugDump()
+	//fmt.Println("← before recalcAfterDeq:")
+	if len(pdr.qers) == 0 {
+		pdr.nextTx = now
+		if pdr.pktq.qlen() != 0 {
+			queuedPdrs.insert(pdr)
 		}
-	*/
+		return
+	}
 	if pdr.far.destinationInterface == IV_ACCESS {
 		size = size - types.EtherLen - types.VLANLen - types.IPv4MinLen - types.UDPLen - gtp5gHdrLen
 	} else {
 		size = size - types.EtherLen - types.VLANLen
 	}
-	if pdr.isUl() {
-		qer.nextUlTx = now + qer.ulDelta*uint64(size)
-	} else {
-		qer.nextDlTx = now + qer.dlDelta*uint64(size)
+	for _, qer := range pdr.qers {
+		if pdr.isUl() {
+			qer.nextUlTx = now + qer.ulDelta*uint64(size)
+		} else {
+			qer.nextDlTx = now + qer.dlDelta*uint64(size)
+		}
 	}
-	queuedPdrsSorted := false
-	if pdr.pktq.qlen() == 0 {
-		qer.queuedPdrs.deq()
-		queuedPdrsSorted = true
+	for _, qer := range pdr.qers {
+		if pdr.isUl() {
+			for _, pTmp := range qer.ulPdrs {
+				latestNext := pTmp.qers[0].nextUlTx
+				for _, qTmp := range pTmp.qers {
+					if int64(latestNext-qTmp.nextUlTx) < 0 {
+						latestNext = qTmp.nextUlTx
+					}
+				}
+				if pTmp.nextTx != latestNext {
+					removed := false
+					if pTmp != pdr && queuedPdrs.exists(pTmp) {
+						queuedPdrs.remove(pTmp)
+						removed = true
+					}
+					pTmp.nextTx = latestNext
+					if pTmp != pdr && removed {
+						queuedPdrs.insert(pTmp)
+					}
+				}
+			}
+		} else {
+			for _, pTmp := range qer.dlPdrs {
+				latestNext := pTmp.qers[0].nextDlTx
+				for _, qTmp := range pTmp.qers {
+					if int64(latestNext-qTmp.nextDlTx) < 0 {
+						latestNext = qTmp.nextDlTx
+					}
+				}
+				if pTmp.nextTx != latestNext {
+					removed := false
+					if pTmp != pdr && queuedPdrs.exists(pTmp) {
+						queuedPdrs.remove(pTmp)
+						removed = true
+					}
+					pTmp.nextTx = latestNext
+					if pTmp != pdr && removed {
+						queuedPdrs.insert(pTmp)
+					}
+				}
+			}
+		}
 	}
-	if !queuedPdrsSorted {
-		qer.queuedPdrs.sort()
-	}
-	queuedQersSorted := false
-	if qer.queuedPdrs.qlen() == 0 {
-		queuedQers.deq()
-		queuedQersSorted = true
-	}
-	if !queuedQersSorted {
-		queuedQers.sort()
+	if pdr.pktq.qlen() != 0 {
+		queuedPdrs.insert(pdr)
 	}
 	/* XXX: */
+	//fmt.Println("→ after recalcAfterDeq:")
 	//debugDump()
+	//fmt.Println("← after recalcAfterDeq:")
 }
 
-func deqable(qer *qer, pdr *pdr, now uint64) bool {
-	if pdr.isUl() {
-		return int64(now-qer.nextUlTx) > 0
-	}
-	return int64(now-qer.nextDlTx) > 0
+func deqable(pdr *pdr, now uint64) bool {
+	return int64(now-pdr.nextTx) >= 0
 }
 
 func n6PdrLookup(pkt *packet.Packet) *pdr {
@@ -169,7 +194,6 @@ func n6Handler(pkt *packet.Packet) *pdr {
 		return nil
 	}
 	vlan := pkt.GetVLAN()
-	//fmt.Println("n6Handler: ***")
 	corkp := (*gtp5gCork)(unsafe.Pointer(uintptr(unsafe.Pointer(pkt.Ether)) + types.EtherLen + types.VLANLen))
 	*corkp = pdr.far.cork
 	gtp5g := (*gtp5gHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(pkt.Ether)) + types.EtherLen + types.VLANLen + types.IPv4MinLen + types.UDPLen))
@@ -233,11 +257,11 @@ func n3n9Handler(pkt *packet.Packet) *pdr {
 		pkt.Ether.DAddr = n6DstMacAddr
 		pkt.Ether.SAddr = localMacAddr
 	} else {
-		vlan := pkt.GetVLAN()
 		gtp5g.teid = pdr.far.cork.gtp5g.teid
 		ipv4.DstAddr = pdr.far.cork.ipv4.DstAddr
 		ipv4.SrcAddr = pdr.far.cork.ipv4.SrcAddr
 		ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+		vlan := pkt.GetVLAN()
 		vlan.SetVLANTagIdentifier(n3n9VlanId)
 		pkt.Ether.DAddr = n3n9DstMacAddr
 		pkt.Ether.SAddr = localMacAddr
@@ -281,23 +305,19 @@ func xlEnq(buf uintptr, enqed *bool) {
 func xlDeq(buf *uintptr, deqed *bool) {
 	lock.RLock()
 	defer lock.RUnlock()
-	qer := queuedQers.head()
-	if qer == nil {
-		*deqed = false
-		return
-	}
-	pdr := qer.queuedPdrs.head()
+	pdr := queuedPdrs.head
 	if pdr == nil {
 		*deqed = false
 		return
 	}
 	now := tsc()
-	if deqable(qer, pdr, now) {
+	if deqable(pdr, now) {
+		queuedPdrs.remove(pdr)
 		*buf, _ = pdr.pktq.deq()
 		*deqed = true
 		pkt := packet.ExtractPacket(*buf)
 		size := pkt.GetPacketLen()
-		recalcAfterDeq(qer, pdr, size, now)
+		recalcAfterDeq(pdr, size, now)
 		return
 	}
 	*deqed = false
