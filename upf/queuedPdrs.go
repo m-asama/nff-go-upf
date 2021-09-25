@@ -3,7 +3,7 @@ package upf
 import (
 	//"errors"
 	//"sort"
-	"fmt"
+	//"fmt"
 	"unsafe"
 )
 
@@ -63,9 +63,9 @@ func (queuedPdrs *queuedPdrsType) transplant(u *pdr, v *pdr) {
 }
 
 func (queuedPdrs *queuedPdrsType) insert(node *pdr) {
-	fmt.Printf("→ before insert: %p nextTx: %d\n", node, node.nextTx)
-	debugDump()
-	fmt.Printf("← before insert: %p nextTx: %d\n", node, node.nextTx)
+	//fmt.Printf("→ before insert: %p nextTx: %d\n", node, node.nextTx)
+	//debugDump()
+	//fmt.Printf("← before insert: %p nextTx: %d\n", node, node.nextTx)
 	y := sentinelPdr
 	x := queuedPdrs.root
 	for {
@@ -102,9 +102,9 @@ func (queuedPdrs *queuedPdrsType) insert(node *pdr) {
 		queuedPdrs.head = head
 	}
 	queuedPdrs.qlen++
-	fmt.Printf("→ after insert: %p nextTx: %d\n", node, node.nextTx)
-	debugDump()
-	fmt.Printf("← after insert: %p nextTx: %d\n", node, node.nextTx)
+	//fmt.Printf("→ after insert: %p nextTx: %d\n", node, node.nextTx)
+	//debugDump()
+	//fmt.Printf("← after insert: %p nextTx: %d\n", node, node.nextTx)
 }
 
 func (queuedPdrs *queuedPdrsType) insertFixup(node *pdr) {
@@ -151,9 +151,9 @@ func (queuedPdrs *queuedPdrsType) insertFixup(node *pdr) {
 }
 
 func (queuedPdrs *queuedPdrsType) remove(node *pdr) {
-	fmt.Printf("→ before remove: %p\n", node)
-	debugDump()
-	fmt.Printf("← before remove: %p\n", node)
+	//fmt.Printf("→ before remove: %p\n", node)
+	//debugDump()
+	//fmt.Printf("← before remove: %p\n", node)
 	var x *pdr
 	y := node
 	yOrigColor := y.color
@@ -193,9 +193,9 @@ func (queuedPdrs *queuedPdrsType) remove(node *pdr) {
 		queuedPdrs.head = head
 	}
 	queuedPdrs.qlen--
-	fmt.Printf("→ after remove: %p\n", node)
-	debugDump()
-	fmt.Printf("← after remove: %p\n", node)
+	//fmt.Printf("→ after remove: %p\n", node)
+	//debugDump()
+	//fmt.Printf("← after remove: %p\n", node)
 }
 
 func (queuedPdrs *queuedPdrsType) removeFixup(node *pdr) {
