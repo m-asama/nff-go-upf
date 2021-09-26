@@ -21,6 +21,7 @@ type Global struct {
 
 type Local struct {
 	Port      *int    `yaml:"port"`
+	Speed     *int    `yaml:"speed"`
 	Address   *string `yaml:"address"`
 	TeAddress *string `yaml:"teAddress"`
 }

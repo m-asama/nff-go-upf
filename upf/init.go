@@ -36,6 +36,10 @@ func initGlobal(conf *config.Config) error {
 	if conf.Global.Local.Address == nil {
 		return errors.New("global.local.address required")
 	}
+	if conf.Global.Local.Speed == nil {
+		return errors.New("global.local.speed required")
+	}
+	speed = uint64(*conf.Global.Local.Speed)
 	localAddress, err := net.ParseMAC(*conf.Global.Local.Address)
 	if err != nil {
 		return errors.New("global.local.address invalid")

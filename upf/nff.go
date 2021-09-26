@@ -15,6 +15,7 @@ import (
 
 var cpuList string
 var port uint16
+var speed uint64
 
 var n6VlanId uint16
 var n3n9VlanId uint16
