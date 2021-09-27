@@ -183,11 +183,21 @@ func initSessions(conf *config.Config) error {
 			if confQer.Mbr != nil {
 				if confQer.Mbr.Ul != nil && *confQer.Mbr.Ul != 0 {
 					newQer.mbrUl = *confQer.Mbr.Ul
-					newQer.ulDelta = tscsec * 8 / (newQer.mbrUl * 1000)
+					newQer.ulBpsDelta = tscsec * 8 / (newQer.mbrUl * 1000)
 				}
 				if confQer.Mbr.Dl != nil && *confQer.Mbr.Dl != 0 {
 					newQer.mbrDl = *confQer.Mbr.Dl
-					newQer.dlDelta = tscsec * 8 / (newQer.mbrDl * 1000)
+					newQer.dlBpsDelta = tscsec * 8 / (newQer.mbrDl * 1000)
+				}
+			}
+			if confQer.PacketRate != nil {
+				if confQer.PacketRate.Ul != nil && *confQer.PacketRate.Ul != 0 {
+					newQer.packetRateUl = *confQer.PacketRate.Ul
+					newQer.ulPpsDelta = tscsec / (newQer.packetRateUl * 1000)
+				}
+				if confQer.PacketRate.Dl != nil && *confQer.PacketRate.Dl != 0 {
+					newQer.packetRateDl = *confQer.PacketRate.Dl
+					newQer.dlPpsDelta = tscsec / (newQer.packetRateDl * 1000)
 				}
 			}
 			if confQer.Qfi != nil {

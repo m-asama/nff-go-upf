@@ -112,18 +112,22 @@ type far struct {
 }
 
 type qer struct {
-	qerid uint32
-	mbrUl uint64
-	mbrDl uint64
-	qfi   uint8
+	qerid        uint32
+	mbrUl        uint64
+	mbrDl        uint64
+	packetRateUl uint64
+	packetRateDl uint64
+	qfi          uint8
 
 	ulPdrs []*pdr
 	dlPdrs []*pdr
 
-	nextUlTx uint64
-	nextDlTx uint64
-	ulDelta  uint64
-	dlDelta  uint64
+	nextUlTx   uint64
+	nextDlTx   uint64
+	ulBpsDelta uint64
+	dlBpsDelta uint64
+	ulPpsDelta uint64
+	dlPpsDelta uint64
 }
 
 var sessions []*session

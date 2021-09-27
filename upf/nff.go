@@ -83,9 +83,29 @@ func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 	}
 	for _, qer := range pdr.qers {
 		if pdr.isUl() {
-			qer.nextUlTx = now + qer.ulDelta*uint64(size)
+			if qer.ulBpsDelta > 0 {
+				qer.nextUlTx = now + qer.ulBpsDelta*uint64(size)
+			} else {
+				qer.nextUlTx = now
+			}
+			if qer.ulPpsDelta > 0 {
+				nextUlTx := now + qer.ulPpsDelta
+				if int64(nextUlTx-qer.nextUlTx) > 0 {
+					qer.nextUlTx = nextUlTx
+				}
+			}
 		} else {
-			qer.nextDlTx = now + qer.dlDelta*uint64(size)
+			if qer.dlBpsDelta > 0 {
+				qer.nextDlTx = now + qer.dlBpsDelta*uint64(size)
+			} else {
+				qer.nextDlTx = now
+			}
+			if qer.dlPpsDelta > 0 {
+				nextDlTx := now + qer.dlPpsDelta
+				if int64(nextDlTx-qer.nextDlTx) > 0 {
+					qer.nextDlTx = nextDlTx
+				}
+			}
 		}
 	}
 	for _, qer := range pdr.qers {

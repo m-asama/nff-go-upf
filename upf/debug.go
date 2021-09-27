@@ -105,6 +105,8 @@ func debugQer(i int, qer *qer) {
 	fmt.Println("		qerid					", qer.qerid)
 	fmt.Println("		mbrUl					", qer.mbrUl)
 	fmt.Println("		mbrDl					", qer.mbrDl)
+	fmt.Println("		packetRateUl				", qer.packetRateUl)
+	fmt.Println("		packetRateDl				", qer.packetRateDl)
 	fmt.Println("		qfi					", qer.qfi)
 }
 
