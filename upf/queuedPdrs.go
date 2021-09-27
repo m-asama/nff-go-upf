@@ -96,14 +96,8 @@ func (queuedPdrs *queuedPdrsType) insert(node *pdr) {
 	node.color = PC_RED
 	queuedPdrs.insertFixup(node)
 	/* XXX: */
-	var head *pdr
-	if queuedPdrs.root == sentinelPdr {
-		head = nil
-	} else {
-		head = queuedPdrs.root.treeMinimum()
-	}
-	if queuedPdrs.head != head {
-		queuedPdrs.head = head
+	if queuedPdrs.head == nil || node != queuedPdrs.head && node.lessThan(queuedPdrs.head) {
+		queuedPdrs.head = node
 	}
 	queuedPdrs.qlen++
 	//fmt.Printf("→ after insert: %p nextTx: %d\n", node, node.nextTx)
@@ -158,6 +152,10 @@ func (queuedPdrs *queuedPdrsType) remove(node *pdr) {
 	//fmt.Printf("→ before remove: %p\n", node)
 	//debugDump()
 	//fmt.Printf("← before remove: %p\n", node)
+	var headRemoved bool
+	if node == queuedPdrs.head {
+		headRemoved = true
+	}
 	var x *pdr
 	y := node
 	yOrigColor := y.color
@@ -187,14 +185,10 @@ func (queuedPdrs *queuedPdrsType) remove(node *pdr) {
 		queuedPdrs.removeFixup(x)
 	}
 	/* XXX: */
-	var head *pdr
 	if queuedPdrs.root == sentinelPdr {
-		head = nil
-	} else {
-		head = queuedPdrs.root.treeMinimum()
-	}
-	if queuedPdrs.head != head {
-		queuedPdrs.head = head
+		queuedPdrs.head = nil
+	} else if headRemoved {
+		queuedPdrs.head = queuedPdrs.root.treeMinimum()
 	}
 	queuedPdrs.qlen--
 	//fmt.Printf("→ after remove: %p\n", node)
