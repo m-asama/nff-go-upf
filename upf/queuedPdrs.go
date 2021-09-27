@@ -1,3 +1,7 @@
+/*
+ * Red-Black tree implementation based on https://github.com/hp685/rbtree
+ */
+
 package upf
 
 import (
