@@ -128,6 +128,8 @@ type qer struct {
 	dlBpsDelta uint64
 	ulPpsDelta uint64
 	dlPpsDelta uint64
+
+	internal bool
 }
 
 var sessions []*session

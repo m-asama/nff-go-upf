@@ -373,6 +373,82 @@ func initSessions(conf *config.Config) error {
 		sort.Slice(newSession.n3n9Pdrs, func(i, j int) bool { return newSession.n3n9Pdrs[i].precedence > newSession.n3n9Pdrs[j].precedence })
 		sessions = append(sessions, &newSession)
 	}
+	// GBR の設定
+	for _, confSession := range conf.Sessions {
+		seid := uint64(*confSession.Fseid.Seid)
+		address := net.ParseIP(*confSession.Fseid.Address)
+		var session *session
+		for _, sessTmp := range sessions {
+			if sessTmp.fseid.seid == seid && sessTmp.fseid.address.Equal(address) {
+				session = sessTmp
+				break
+			}
+		}
+		if session == nil {
+			return fmt.Errorf("session not found")
+		}
+		for _, confQer := range confSession.Qers {
+			if confQer.Gbr == nil {
+				continue
+			}
+			var ul, dl uint64
+			if confQer.Gbr.Ul != nil {
+				ul = *confQer.Gbr.Ul
+			}
+			if confQer.Gbr.Dl != nil {
+				dl = *confQer.Gbr.Dl
+			}
+			if ul == 0 && dl == 0 {
+				continue
+			}
+			if speed <= ul || speed <= dl {
+				return fmt.Errorf("gbr invalid")
+			}
+			internalQer := &qer{
+				mbrUl:      speed - ul,
+				mbrDl:      speed - dl,
+				ulPdrs:     make([]*pdr, 0),
+				dlPdrs:     make([]*pdr, 0),
+				nextUlTx:   tsc(),
+				nextDlTx:   tsc(),
+				ulBpsDelta: tscsec * 8 / ((speed - ul) * 1000),
+				dlBpsDelta: tscsec * 8 / ((speed - dl) * 1000),
+				internal:   true,
+			}
+			for _, sessTmp := range sessions {
+				for _, pdrTmp := range sessTmp.n6Pdrs {
+					for _, qerTmp := range pdrTmp.qers {
+						if qerTmp.internal {
+							continue
+						}
+						if sessTmp != session || qerTmp.qerid != uint32(*confQer.Qerid) {
+							pdrTmp.qers = append(pdrTmp.qers, internalQer)
+							if pdrTmp.isUl() {
+								internalQer.ulPdrs = append(internalQer.ulPdrs, pdrTmp)
+							} else {
+								internalQer.dlPdrs = append(internalQer.dlPdrs, pdrTmp)
+							}
+						}
+					}
+				}
+				for _, pdrTmp := range sessTmp.n3n9Pdrs {
+					for _, qerTmp := range pdrTmp.qers {
+						if qerTmp.internal {
+							continue
+						}
+						if sessTmp != session || qerTmp.qerid != uint32(*confQer.Qerid) {
+							pdrTmp.qers = append(pdrTmp.qers, internalQer)
+							if pdrTmp.isUl() {
+								internalQer.ulPdrs = append(internalQer.ulPdrs, pdrTmp)
+							} else {
+								internalQer.dlPdrs = append(internalQer.dlPdrs, pdrTmp)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
 
