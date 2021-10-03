@@ -94,6 +94,9 @@ func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 					qer.nextUlTx = nextUlTx
 				}
 			}
+			for _, pTmp := range qer.ulPdrs {
+				pTmp.nextTxUpdated = false
+			}
 		} else {
 			if qer.dlBpsDelta > 0 {
 				qer.nextDlTx = now + qer.dlBpsDelta*uint64(size)
@@ -106,11 +109,17 @@ func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 					qer.nextDlTx = nextDlTx
 				}
 			}
+			for _, pTmp := range qer.dlPdrs {
+				pTmp.nextTxUpdated = false
+			}
 		}
 	}
 	for _, qer := range pdr.qers {
 		if pdr.isUl() {
 			for _, pTmp := range qer.ulPdrs {
+				if pTmp.nextTxUpdated {
+					continue
+				}
 				latestNext := pTmp.qers[0].nextUlTx
 				for _, qTmp := range pTmp.qers {
 					if int64(latestNext-qTmp.nextUlTx) < 0 {
@@ -128,9 +137,13 @@ func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 						queuedPdrs.insert(pTmp)
 					}
 				}
+				pTmp.nextTxUpdated = true
 			}
 		} else {
 			for _, pTmp := range qer.dlPdrs {
+				if pTmp.nextTxUpdated {
+					continue
+				}
 				latestNext := pTmp.qers[0].nextDlTx
 				for _, qTmp := range pTmp.qers {
 					if int64(latestNext-qTmp.nextDlTx) < 0 {
@@ -148,6 +161,7 @@ func recalcAfterDeq(pdr *pdr, size uint, now uint64) {
 						queuedPdrs.insert(pTmp)
 					}
 				}
+				pTmp.nextTxUpdated = true
 			}
 		}
 	}

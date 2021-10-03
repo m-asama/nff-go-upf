@@ -63,6 +63,8 @@ type pdr struct {
 	left   *pdr
 	right  *pdr
 	color  pdrColor
+
+	nextTxUpdated bool
 }
 
 /* XXX: */
