@@ -2,6 +2,7 @@ global:
   cpuList: 0-3
   local:
     port: 0
+    speed: 5000000
     address: xx:xx:xx:xx:xx:xx
     teAddress: 172.16.1.1
   n3n9:

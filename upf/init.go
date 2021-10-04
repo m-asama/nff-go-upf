@@ -36,6 +36,10 @@ func initGlobal(conf *config.Config) error {
 	if conf.Global.Local.Address == nil {
 		return errors.New("global.local.address required")
 	}
+	if conf.Global.Local.Speed == nil {
+		return errors.New("global.local.speed required")
+	}
+	speed = uint64(*conf.Global.Local.Speed)
 	localAddress, err := net.ParseMAC(*conf.Global.Local.Address)
 	if err != nil {
 		return errors.New("global.local.address invalid")
@@ -179,11 +183,21 @@ func initSessions(conf *config.Config) error {
 			if confQer.Mbr != nil {
 				if confQer.Mbr.Ul != nil && *confQer.Mbr.Ul != 0 {
 					newQer.mbrUl = *confQer.Mbr.Ul
-					newQer.ulDelta = tscsec * 8 / (newQer.mbrUl * 1000)
+					newQer.ulBpsDelta = tscsec * 8 / (newQer.mbrUl * 1000)
 				}
 				if confQer.Mbr.Dl != nil && *confQer.Mbr.Dl != 0 {
 					newQer.mbrDl = *confQer.Mbr.Dl
-					newQer.dlDelta = tscsec * 8 / (newQer.mbrDl * 1000)
+					newQer.dlBpsDelta = tscsec * 8 / (newQer.mbrDl * 1000)
+				}
+			}
+			if confQer.PacketRate != nil {
+				if confQer.PacketRate.Ul != nil && *confQer.PacketRate.Ul != 0 {
+					newQer.packetRateUl = *confQer.PacketRate.Ul
+					newQer.ulPpsDelta = tscsec / (newQer.packetRateUl * 1000)
+				}
+				if confQer.PacketRate.Dl != nil && *confQer.PacketRate.Dl != 0 {
+					newQer.packetRateDl = *confQer.PacketRate.Dl
+					newQer.dlPpsDelta = tscsec / (newQer.packetRateDl * 1000)
 				}
 			}
 			if confQer.Qfi != nil {
@@ -327,6 +341,7 @@ func initSessions(conf *config.Config) error {
 				}
 			}
 			newPdr.pktq = newPktq(256)
+			newPdr.nextTx = tsc()
 			if newPdr.pdi.fteid.teid == 0 && newPdr.pdi.fteid.address == nil {
 				newSession.n6Pdrs = append(newSession.n6Pdrs, &newPdr)
 				var n6SessionKey n6SessionKey
@@ -357,6 +372,82 @@ func initSessions(conf *config.Config) error {
 		sort.Slice(newSession.n6Pdrs, func(i, j int) bool { return newSession.n6Pdrs[i].precedence > newSession.n6Pdrs[j].precedence })
 		sort.Slice(newSession.n3n9Pdrs, func(i, j int) bool { return newSession.n3n9Pdrs[i].precedence > newSession.n3n9Pdrs[j].precedence })
 		sessions = append(sessions, &newSession)
+	}
+	// GBR の設定
+	for _, confSession := range conf.Sessions {
+		seid := uint64(*confSession.Fseid.Seid)
+		address := net.ParseIP(*confSession.Fseid.Address)
+		var session *session
+		for _, sessTmp := range sessions {
+			if sessTmp.fseid.seid == seid && sessTmp.fseid.address.Equal(address) {
+				session = sessTmp
+				break
+			}
+		}
+		if session == nil {
+			return fmt.Errorf("session not found")
+		}
+		for _, confQer := range confSession.Qers {
+			if confQer.Gbr == nil {
+				continue
+			}
+			var ul, dl uint64
+			if confQer.Gbr.Ul != nil {
+				ul = *confQer.Gbr.Ul
+			}
+			if confQer.Gbr.Dl != nil {
+				dl = *confQer.Gbr.Dl
+			}
+			if ul == 0 && dl == 0 {
+				continue
+			}
+			if speed <= ul || speed <= dl {
+				return fmt.Errorf("gbr invalid")
+			}
+			internalQer := &qer{
+				mbrUl:      speed - ul,
+				mbrDl:      speed - dl,
+				ulPdrs:     make([]*pdr, 0),
+				dlPdrs:     make([]*pdr, 0),
+				nextUlTx:   tsc(),
+				nextDlTx:   tsc(),
+				ulBpsDelta: tscsec * 8 / ((speed - ul) * 1000),
+				dlBpsDelta: tscsec * 8 / ((speed - dl) * 1000),
+				internal:   true,
+			}
+			for _, sessTmp := range sessions {
+				for _, pdrTmp := range sessTmp.n6Pdrs {
+					for _, qerTmp := range pdrTmp.qers {
+						if qerTmp.internal {
+							continue
+						}
+						if sessTmp != session || qerTmp.qerid != uint32(*confQer.Qerid) {
+							pdrTmp.qers = append(pdrTmp.qers, internalQer)
+							if pdrTmp.isUl() {
+								internalQer.ulPdrs = append(internalQer.ulPdrs, pdrTmp)
+							} else {
+								internalQer.dlPdrs = append(internalQer.dlPdrs, pdrTmp)
+							}
+						}
+					}
+				}
+				for _, pdrTmp := range sessTmp.n3n9Pdrs {
+					for _, qerTmp := range pdrTmp.qers {
+						if qerTmp.internal {
+							continue
+						}
+						if sessTmp != session || qerTmp.qerid != uint32(*confQer.Qerid) {
+							pdrTmp.qers = append(pdrTmp.qers, internalQer)
+							if pdrTmp.isUl() {
+								internalQer.ulPdrs = append(internalQer.ulPdrs, pdrTmp)
+							} else {
+								internalQer.dlPdrs = append(internalQer.dlPdrs, pdrTmp)
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -418,7 +509,7 @@ func init() {
 	sessions = make([]*session, 0)
 	n6SessionMap = make(map[n6SessionKey]*session)
 	n3n9SessionMap = make(map[n3n9SessionKey]*session)
-	queuedPdrs.init()
+	//queuedPdrs.init()
 
 	t1 := tsc()
 	time.Sleep(time.Second)

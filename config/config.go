@@ -21,6 +21,7 @@ type Global struct {
 
 type Local struct {
 	Port      *int    `yaml:"port"`
+	Speed     *int    `yaml:"speed"`
 	Address   *string `yaml:"address"`
 	TeAddress *string `yaml:"teAddress"`
 }
@@ -95,13 +96,25 @@ type OuterHeaderCreation struct {
 }
 
 type Qer struct {
-	Qerid      *int    `yaml:"qerid"`
-	GateStatus *string `yaml:"gateStatus"`
-	Mbr        *Mbr    `yaml:"mbr"`
-	Qfi        *int    `yaml:"qfi"`
+	Qerid      *int        `yaml:"qerid"`
+	GateStatus *string     `yaml:"gateStatus"`
+	Mbr        *Mbr        `yaml:"mbr"`
+	Gbr        *Gbr        `yaml:"gbr"`
+	PacketRate *PacketRate `yaml:"packetRate"`
+	Qfi        *int        `yaml:"qfi"`
 }
 
 type Mbr struct {
+	Ul *uint64 `yaml:"ul"`
+	Dl *uint64 `yaml:"dl"`
+}
+
+type Gbr struct {
+	Ul *uint64 `yaml:"ul"`
+	Dl *uint64 `yaml:"dl"`
+}
+
+type PacketRate struct {
 	Ul *uint64 `yaml:"ul"`
 	Dl *uint64 `yaml:"dl"`
 }
